@@ -1,0 +1,45 @@
+library(grid)
+
+create.configurations <- function(base.dir=".") {
+  sizes <- c(200)
+  graph.settings <- expand.grid(graph.type=c("small-world"), degree=5, p=c(0.03, 0.05, 0.1), power=NA, mu=NA, size=c(225))
+  graph.settings <- rbind(graph.settings, expand.grid(graph.type=c("barabasi-albert"), power=c(0.1, 0.3, 0.5), degree=NA, p=NA, mu=NA, size=sizes))
+  graph.settings <- rbind(graph.settings, expand.grid(graph.type=c("sbm"), mu=c(0.1, .2, .3), degree=NA, p=NA, power=NA, size=c(500)))
+  graph.settings$graph.no <- 1:nrow(graph.settings)
+  exp.settings.red <- expand.grid(lambda_0=-1.5, lambda_1=.75, lambda_2=.5)
+  exp1 <- merge(graph.settings, exp.settings.red)
+  
+  exp.settings <- expand.grid(lambda_0=c(-1.5), lambda_1=c(0.25, 0.5, 0.75, 1), lambda_2=c(0, 0.1, 0.5, 1.0))
+  graph.settings.red <- expand.grid(graph.type="small-world", degree=5, p=0.05, power=NA, mu=NA, size=225)
+  graph.settings.red <- rbind(graph.settings.red, expand.grid(graph.type="barabasi-albert", power=0.3, degree=NA, p=NA, mu=NA, size=200))
+  graph.settings.red <- rbind(graph.settings.red, expand.grid(graph.type="sbm", mu=.2, degree=NA, p=NA, power=NA, size=500))
+  graph.settings.red <- merge(graph.settings, graph.settings.red, by=colnames(graph.settings.red))
+  
+  exp2 <- merge(graph.settings.red, exp.settings)
+  exp2 <- subset(exp2, !(graph.no %in% exp1$graph.no & lambda_1 == 0.75 & lambda_2 == 0.5))
+  
+  all.settings <- rbind(exp1, exp2)
+  
+  write.csv(all.settings, file.path(base.dir, "all_adv_configurations.csv"))
+}
+
+create.graph.inf.configurations <- function(base.dir=".") {
+  sizes <- c(500)
+  graph.settings <- expand.grid(graph.type=c("small-world"), degree=5, p=c(0.03, 0.04, 0.05, 0.06, 0.07), power=NA, mu=NA, size=c(500))
+  graph.settings <- rbind(graph.settings, expand.grid(graph.type=c("barabasi-albert"), power=c(0.1, 0.2, 0.3, 0.4, 0.5), degree=NA, p=NA, mu=NA, size=sizes))
+  graph.settings <- rbind(graph.settings, expand.grid(graph.type=c("sbm"), mu=c(0.1, .2, .3), degree=NA, p=NA, power=NA, size=c(500)))
+  graph.settings$graph.no <- 1:nrow(graph.settings)
+  exp.settings.red <- expand.grid(lambda_0=-1.5, lambda_1=.75, lambda_2=.5)
+  all.settings <- merge(graph.settings, exp.settings.red)
+  
+  write.csv(all.settings, file.path(base.dir, "all_inf_graph_configurations2.csv"))
+}
+
+create.realworld.configurations <- function(base.dir=".") {
+  graph.settings <- expand.grid(graph.type=c("polyblogs", "facebook"), degree=NA, p=NA, power=NA, mu=NA, size=NA)
+  graph.settings$graph.no <- 1:nrow(graph.settings)
+  exp.settings <- expand.grid(lambda_0=c(-1.5), lambda_1=c(0.25, 0.5, 0.75, 1), lambda_2=c(0, 0.1, 0.5, 1.0))
+  all.settings <- merge(graph.settings, exp.settings)
+  
+  write.csv(all.settings, file.path(base.dir, "all_adv_configurations.csv"))
+}
