@@ -1,18 +1,19 @@
 library(grid)
 
 create.configurations <- function(base.dir=".") {
-  sizes <- c(200)
-  graph.settings <- expand.grid(graph.type=c("small-world"), degree=5, p=c(0.03, 0.05, 0.1), power=NA, mu=NA, size=c(225))
+  sizes <- c(500, 1000, 5000)
+  graph.settings <- expand.grid(graph.type=c("small-world"), degree=5, p=c(0.03, 0.05, 0.1), power=NA, mu=NA, size=sizes)
   graph.settings <- rbind(graph.settings, expand.grid(graph.type=c("barabasi-albert"), power=c(0.1, 0.3, 0.5), degree=NA, p=NA, mu=NA, size=sizes))
-  graph.settings <- rbind(graph.settings, expand.grid(graph.type=c("sbm"), mu=c(0.1, .2, .3), degree=NA, p=NA, power=NA, size=c(500)))
+  graph.settings <- rbind(graph.settings, expand.grid(graph.type=c("sbm"), mu=c(0.1, .2, .3), degree=NA, p=NA, power=NA, size=sizes))
   graph.settings$graph.no <- 1:nrow(graph.settings)
   exp.settings.red <- expand.grid(lambda_0=-1.5, lambda_1=.75, lambda_2=.5)
   exp1 <- merge(graph.settings, exp.settings.red)
+  write.csv(exp1, file.path(base.dir, "binary_networks/all_graph_configurations.csv"))
   
   exp.settings <- expand.grid(lambda_0=c(-1.5), lambda_1=c(0.25, 0.5, 0.75, 1), lambda_2=c(0, 0.1, 0.5, 1.0))
   graph.settings.red <- expand.grid(graph.type="small-world", degree=5, p=0.05, power=NA, mu=NA, size=225)
   graph.settings.red <- rbind(graph.settings.red, expand.grid(graph.type="barabasi-albert", power=0.3, degree=NA, p=NA, mu=NA, size=200))
-  graph.settings.red <- rbind(graph.settings.red, expand.grid(graph.type="sbm", mu=.2, degree=NA, p=NA, power=NA, size=500))
+  graph.settings.red <- rbind(graph.settings.red, expand.grid(graph.type="sbm", mu=.2, degree=NA, p=NA, power=NA, size=sizes))
   graph.settings.red <- merge(graph.settings, graph.settings.red, by=colnames(graph.settings.red))
   
   exp2 <- merge(graph.settings.red, exp.settings)

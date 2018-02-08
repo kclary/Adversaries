@@ -4,12 +4,26 @@ build.graph.params <- function(configs, i) {
   if(as.character(configs[i,]$graph.type) == "barabasi-albert") graph.params <- barabasi.params(configs[i,]$size, configs[i,]$power)
   if(as.character(configs[i,]$graph.type) == "small-world") graph.params <- sw.params(configs[i,]$size, configs[i,]$degree, configs[i,]$p)
   if(as.character(configs[i,]$graph.type) == "sbm") graph.params <- sbm.params(configs[i,]$size, configs[i,]$mu)
+  if(as.character(configs[i,]$graph.type) == "forest-fire") graph.params <- ff.params(configs[i,]$size, configs[i,]$fw, configs[i,]$bw)
   if(as.character(configs[i,]$graph.type) %in% c("polyblogs", "facebook")) { 
     graph.params <- list()
     graph.params$graph.type <- as.character(configs[i,]$graph.type)
   }  
   
   return(graph.params)
+}
+
+get.graph.properties <- function(g) { 
+  graph.properties <- list()
+  graph.properties$g <- g
+  graph.properties$degrees <- degree(g)
+  graph.properties$n <- length(V(g))
+  graph.properties$adj <- get.adjacency(g, sparse=FALSE)
+  
+  graph.properties$degree.inv <- solve(diag(graph.properties$degrees))
+  graph.properties$transition <-  degree.inv %*% adj 
+  
+  return(graph.properties)
 }
 
 barabasi.params <- function(n, power) { 
@@ -24,7 +38,7 @@ barabasi.params <- function(n, power) {
 sw.params <- function(n, degree, p) { 
   graph.params <- list()
   graph.params$graph.type <- "small-world"
-  graph.params$degree <- 5
+  graph.params$degree <- degree
   graph.params$n <- n
   graph.params$p <- p
   
@@ -40,6 +54,15 @@ sbm.params <- function(n, mu) {
   return(graph.params)
 }
 
+ff.params <- function(n, fw, bw) { 
+  graph.params <- list() 
+  graph.params$graph.type <- "forest-fire"
+  graph.params$n <- n
+  graph.params$forward.prob <- fw
+  graph.params$backward.prob <- bw
+  return(graph.params)
+}
+
 generate.graph <- function(graph.params) { 
   graph.type <- graph.params$graph.type
   
@@ -48,15 +71,23 @@ generate.graph <- function(graph.params) {
   }
   
   if(graph.type == "barabasi-albert") { 
-    g <- barabasi.game(graph.params$n, graph.params$power, directed=FALSE)    
+    if(graph.params$n == 500) add.edges <- rbinom(graph.params$n, 1, 0.1)+4
+    if(graph.params$n == 1000) add.edges <- rbinom(graph.params$n, 1, 0.1)+8
+    if(graph.params$n == 5000) add.edges <- rbinom(graph.params$n, 1, 0.1)+37
+    
+    g <- barabasi.game(graph.params$n, graph.params$power, out.seq=add.edges, directed=FALSE)    
   }
   
   if(graph.type == "sbm") { 
-    edg <- read.csv(paste0("binary_networks/nets/network-", graph.params$ind, "-", substr(as.character(graph.params$mu), 2, 3), ".dat"), sep="\t")
-    adj <- matrix(0, graph.params$n, graph.params$n)
-    for(i in 1:dim(edg)[1]) adj[edg[i,1],edg[i,2]] <- 1
-    g <- graph_from_adjacency_matrix(adj, mode="undirected")
+    edg <- read.csv(paste0("binary_networks/nets/sbm-", graph.params$n, "-", graph.params$mu, "-", graph.params$ind, "-adj.txt"), sep="\t", header=FALSE)
+    edg <- as.matrix(edg)
+    g <- graph_from_adjacency_matrix(edg, mode="undirected")
     
+  }
+  
+  if(graph.type == "forest-fire") { 
+    bw.factor <- graph.params$backward.prob/graph.params$forward.prob
+    g <- forest.fire.game(n=graph.params$n, fw.prob = graph.params$forward.prob, bw.factor = bw.factor, directed = FALSE)  
   }
   
   if(graph.type == "polyblogs") { 
@@ -65,28 +96,32 @@ generate.graph <- function(graph.params) {
     g <- induced_subgraph(g, which(cl$membership == which.max(cl$csize)))
   }
   
-  # if(graph.type == "facebook") { 
-  #   g <- read_graph(file = "graph-data/", format = "gml")   
-  #   cl <- clusters(g)
-  #   g <- induced_subgraph(g, which(cl$membership == which.max(cl$csize)))
-  # }
+  if(graph.type == "facebook") { 
+    edg <- read.csv(paste0("graph-data/facebook/facebook_combined.txt"), sep=" ", header=FALSE)
+    edg <- as.matrix(edg)+1
+    
+    graph.params$n <- max(edg)
+    adj <- matrix(0, graph.params$n, graph.params$n)
+    for(i in 1:dim(edg)[1]) adj[edg[i,1],edg[i,2]] <- 1
+    g <- graph_from_adjacency_matrix(adj)
+  }
+  
   return(g)
 }
 
-check.dominating.set <- function(g, adversaries) { 
-  adj <- get.adjacency(g, sparse=FALSE)
+check.dominating.set <- function(graph.properties, adversaries) { 
   adv <- as.matrix(adversaries)
-  adj.adversaries <- (adj %*% t(adv)) + t(adv)
-  return(sum(rowSums(adj.adversaries) > 0) == dim(adj)[1])
+  adj.adversaries <- (graph.properties$adj %*% t(adv)) + t(adv)
+  return(sum(rowSums(adj.adversaries) > 0) == dim(graph.properties$adj)[1])
 }
 
 generate.clusters <- function(g, clustering) { 
   return(cluster_infomap(g)$membership)
 }
 
-dominate.greedy <- function(g,weight=NULL,proportion=1.0) {
-  A <- get.adjacency(g, sparse=FALSE)
-  od <- degree(g,mode="out")+1
+dominate.greedy <- function(graph.properties,weight=NULL,proportion=1.0) {
+  A <- graph.properties$adj
+  od <- degree(graph.properties$g,mode="out")+1
   S <- NULL
   diag(A) <- 0
   n <- nrow(A)
@@ -134,4 +169,80 @@ dominate.greedy.inf <- function(g,weight=NULL,proportion=1.0) {
     od <- colSums(trans)
   }
   S
+}
+
+test.sw <- function() { 
+  sw.params(1000, 3, 0.02)
+}
+
+test.sbm <- function() {
+  sbm.params(1000, 0.2)
+}
+
+test.barabasi <- function() { 
+  barabasi.params(1000, 0.3)
+}
+
+test.ff <- function() { 
+  ff.params(1000, 0.37, 0.25)  
+}
+
+test.graph.properties <- function(graph.params) { 
+  num.edges <- lapply(1:100, function(x) { 
+    graph.params$ind <- x
+    g <- generate.graph(graph.params)  
+    return(sum(get.adjacency(g))/2)
+  })
+  #print(unlist(num.edges))
+  print(median(unlist(num.edges)))
+}
+
+test.sbm.edges <- function() { 
+  for(i in c(500,1000,5000)) { 
+    for(j in c(0.1, 0.3, 0.5)) { 
+      graph.params <- sbm.params(i,j)  
+      cat(paste("sbm", i, j))
+      test.graph.properties(graph.params)
+    }  
+  }
+}
+
+test.barabasi.edges <- function() { 
+  for(i in c(1000,5000)) { 
+    for(j in c(0.1, 0.2, 0.3)) { 
+      graph.params <- barabasi.params(i,j)  
+      cat(paste("barabasi", i, j))
+      test.graph.properties(graph.params)
+    }  
+  }
+}
+
+test.sw.edges <- function() { 
+  for(i in c(500, 1000, 5000)) { 
+    z <- 0
+    if(i == 500) z <- 4
+    if(i == 1000) z <- 8
+    if(i == 5000) z <- 37
+    for(j in c(0.03, 0.05, 0.1)) { 
+      graph.params <- sw.params(i, z, j)  
+      cat(paste("sw", i, z, j))
+      test.graph.properties(graph.params)
+    }  
+  }
+}
+
+test.ff.edges <- function() { 
+  for(i in c(5000)) { 
+   # z <- 0
+  #  if(i == 500) z <- 4
+   # if(i == 1000) z <- 8
+  #  if(i == 5000) z <- 37
+    for(j in c(0.36, 0.365, 0.37, 0.38)) { 
+      for(k in c(0.36, 0.365, 0.34, 0.35, .34, 0.37)) { 
+        graph.params <- ff.params(i, j, k)  
+        cat(paste("ff", i, j, k))
+        test.graph.properties(graph.params)
+      }
+    }  
+  }
 }

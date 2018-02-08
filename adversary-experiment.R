@@ -29,28 +29,28 @@ get.stochastic.vars <- function(num, steps, sdnoise, noise) {
 adversary.experiment <- function(graph.params, clustering, adversary.params, outcome.params) { 
   # generate graph structure
   g <- generate.graph(graph.params)
-  n <- length(V(g))
+  graph.properties <- get.graph.properties(g)
   
-  avg.degree <- mean(degree(g))
+  avg.degree <- mean(graph.properties$degree)
   
   # generate graph clustering
-  clusters <- generate.clusters(g, clustering)
+  clusters <- generate.clusters(graph.properties$g, clustering)
   
   # assign treatment 
-  treatment <- treatment.assignment(g, clusters)
+  treatment <- treatment.assignment(graph.properties$g, clusters)
   treatment.assignments <- treatment[clusters]
   
   # prepre outcome model parameters
-  stochastic.vars <- get.stochastic.vars(n, 3, .1, TRUE)
+  stochastic.vars <- get.stochastic.vars(graph.properties$n, 3, .1, TRUE)
   
   bias.behavior <- data.frame(index=numeric(), size.of.dom=logical(), method=character(), pt.uncovered=numeric(), adversary.influence=numeric(), ATE.true=numeric(), ATE.adv.est=numeric(), ATE.adv.gui=numeric(), gui.beta=numeric(), gui.gamma=numeric(), stringsAsFactors=FALSE)
-  nonadv.ATE <- as.numeric(calculate.ATE.various(0, g, matrix(0,1,n), outcome.params, adversary.params, treatment.assignments, stochastic.vars, bias.behavior)$ATE.adv.gui[1])
+  nonadv.ATE <- as.numeric(calculate.ATE.various(0, graph.properties, matrix(0,1,graph.properties$n), outcome.params, adversary.params, treatment.assignments, stochastic.vars, bias.behavior)$ATE.adv.gui[1])
   
   if(!adversary.params$all) { 
     adversary.params$setting <- "dominating"
     adversary.params$weighting <- "influence"
     adversary.params$max <- TRUE
-    dominating.adversaries.inf <- unlist(list(determine.adversaries(g, adversary.params)))
+    dominating.adversaries.inf <- unlist(list(determine.adversaries(graph.properties, adversary.params)))
     adversary.params$max.dom.adv <- sum(dominating.adversaries.inf)
     
     adversary.params$max <- FALSE
@@ -68,7 +68,7 @@ adversary.experiment <- function(graph.params, clustering, adversary.params, out
     adversary.params$setting <- "dominating"
     adversary.params$max <- TRUE
     adversary.params$weighting <- "degree"
-    dominating.adversaries.deg <- unlist(list(determine.adversaries(g, adversary.params)))
+    dominating.adversaries.deg <- unlist(list(determine.adversaries(graph.properties, adversary.params)))
     adversary.params$max.dom.adv <- max(sum(dominating.adversaries.deg), adversary.params$max.dom.adv)
     
     adversary.params$max <- FALSE
@@ -86,7 +86,7 @@ adversary.experiment <- function(graph.params, clustering, adversary.params, out
   
   adversary.params$max <- TRUE
   adversary.params$setting <- "random"
-  random.adversaries <- unlist(list(determine.adversaries(g, adversary.params)))
+  random.adversaries <- unlist(list(determine.adversaries(graph.properties, adversary.params)))
   if(adversary.params$all) random.adversaries <- sample(1:graph.params$n, graph.params$n, replace=FALSE)
   
   rand.size <- ifelse(adversary.params$all, graph.params$n, max(sum(dominating.adversaries.inf==1), sum(dominating.adversaries.deg==1)))
@@ -119,14 +119,13 @@ treatment.assignment <- function(g, clusters, prob=0.5) {
   return(rbinom(length(unique(clusters)), 1, prob))
 }
 
-determine.adversaries <- function(g, adversary.params) {
-  n <- length(V(g))
-  adversaries <- matrix(0, 1, n)
+determine.adversaries <- function(graph.properties, adversary.params) {
+  adversaries <- matrix(0, 1, graph.properties$n)
   if(adversary.params$setting == "random") { 
-    rand.order <- sample(1:n, n)
+    rand.order <- sample(1:graph.properties$n, graph.properties$n)
     if(adversary.params$max) { 
       idx <- 1
-      while(!check.dominating.set(g, adversaries)) { 
+      while(!check.dominating.set(graph.properties$g, adversaries)) { 
         adversaries[rand.order[idx]] <- 1
         idx <- idx + 1
       }  
@@ -135,29 +134,28 @@ determine.adversaries <- function(g, adversary.params) {
   }
   if(adversary.params$setting == "dominating") { 
     if(adversary.params$weighting == "degree") { }
-    dominating.set <- dominate.greedy(g)
+    dominating.set <- dominate.greedy(graph.properties$g)
     if(adversary.params$max) adversary.params$num.adv <- length(dominating.set)
     adversaries[,sample(dominating.set, adversary.params$num.adv)] <- 1
   } else {
-    dominating.set <- dominate.greedy.inf(g)
+    dominating.set <- dominate.greedy.inf(graph.properties$g)
     if(adversary.params$max) adversary.params$num.adv <- length(dominating.set)
     adversaries[,sample(dominating.set, adversary.params$num.adv)] <- 1
   }
   return(adversaries)
 }
 
-calculate.ATE.various <- function(idx, g, adversaries, outcome.params, adversary.params, treatment.assignments, stochastic.vars, bias.behavior) { 
-  n <- length(V(g))
-  uncovered.vertices <- 1 - adversaries %*% get.adjacency(g) - adversaries
-  pt.uncovered <- sum(uncovered.vertices == 1)/n
+calculate.ATE.various <- function(idx, graph.properties, adversaries, outcome.params, adversary.params, treatment.assignments, stochastic.vars, bias.behavior) { 
+  uncovered.vertices <- 1 - adversaries %*% graph.properties$adj - adversaries
+  pt.uncovered <- sum(uncovered.vertices == 1)/graph.properties$n
   #prepare.for.plots(g, adversaries, adversary.params$adversary.exposure, treatment.assignments)
   
   # calculate true outcome without adversaries
   ATE.true <- outcome.params$lambda_1 + outcome.params$lambda_2
   
   # calculate outcome with adversaries
-  adversary.params <- exposure.probs(adversary.params, g, treatment.assignments, adversaries)
-  outcome.adv <- outcome.model(outcome.params, treatment.assignments, g, adversaries, adversary.params, stochastic.vars)
+  adversary.params <- exposure.probs(adversary.params, graph.properties, treatment.assignments, adversaries)
+  outcome.adv <- outcome.model(outcome.params, treatment.assignments, graph.properties, adversaries, adversary.params, stochastic.vars)
   
   # estimate ATE allowing adversaries
   lm.estimator.adv <- lam.I.adv(treatment.assignments, adversary.params, outcome.adv)
@@ -166,7 +164,7 @@ calculate.ATE.various <- function(idx, g, adversaries, outcome.params, adversary
   if(is.na(ATE.bias.adv)) ATE.bias.adv <- 0
   
   # estimate ATE using the Gui framework
-  lm.estimator.gui <- lam.I(g, treatment.assignments, outcome.adv)
+  lm.estimator.gui <- lam.I(graph.properties, treatment.assignments, outcome.adv)
   gui.beta <- lm.estimator.gui$coefficients[2]
   gui.gamma <- lm.estimator.gui$coefficients[3]
   ATE.adv.gui <- gui.beta + gui.gamma
@@ -183,10 +181,8 @@ calculate.ATE.various <- function(idx, g, adversaries, outcome.params, adversary
   return(bias.behavior)
 }
 
-lam.I <- function(g, treatment.assignments, outcome) {
-  degrees <-degree(g)
-  adj <- get.adjacency(g, sparse=FALSE)
-  frac.treated <- as.numeric((adj %*% treatment.assignments) / degrees)
+lam.I <- function(graph.properties, treatment.assignments, outcome) {
+  frac.treated <- as.numeric((graph.properties$adj %*% treatment.assignments) / graph.properties$degrees)
   
   outcome.model <- lm(outcome ~ treatment.assignments + frac.treated)
   return(outcome.model)
@@ -201,51 +197,40 @@ lam.I.adv <- function(treatment.assignments, adversary.params, outcome) {
   return(outcome.model)
 }
 
-exposure.probs <- function(adversary.params, g, treatment.assignments, adversaries, lambda=0.1, p=2) { 
-  degrees <- degree(g)
-  n <- length(V(g))
-  adj <- get.adjacency(g, sparse=FALSE)
-  
-  degree.inv <- solve(diag(degrees))
-  transition <-  degree.inv %*% adj 
-  
+exposure.probs <- function(adversary.params, graph.properties, treatment.assignments, adversaries, lambda=0.1, p=2) { 
   nonadv <- 1 - adversaries
   treated.nonadv <- treatment.assignments * nonadv
   control.nonadv <- (1 - treatment.assignments) * nonadv
   treated.adv <- treatment.assignments * adversaries
   control.adv <- adversaries - treated.adv
   
-  adversary.params$empty <- as.vector(matrix(0,1,n))
-  adversary.params$adversary.exposure.neighbors <- as.vector(t(adj %*% t(adversaries) / degrees))
-  adversary.params$adversary.treat.exposure.neighbors <- as.vector(t(adj %*% t(treated.adv) / degrees))
-  adversary.params$adversary.control.exposure.neighbors <- as.vector(t(adj %*% t(control.adv) / degrees))
-  adversary.params$nonadv.treat.exposure.neighbors <- as.vector(t(adj %*% t(treated.nonadv) / degrees))
-  adversary.params$nonadv.control.exposure.neighbors <- as.vector(t(adj %*% t(control.nonadv) / degrees))
+  adversary.params$empty <- as.vector(matrix(0, 1, graph.properties$n))
+  adversary.params$adversary.exposure.neighbors <- as.vector(t(graph.properties$adj %*% t(adversaries) / graph.properties$degrees))
+  adversary.params$adversary.treat.exposure.neighbors <- as.vector(t(graph.properties$adj %*% t(treated.adv) / graph.properties$degrees))
+  adversary.params$adversary.control.exposure.neighbors <- as.vector(t(graph.properties$adj %*% t(control.adv) / graph.properties$degrees))
+  adversary.params$nonadv.treat.exposure.neighbors <- as.vector(t(graph.properties$adj %*% t(treated.nonadv) / graph.properties$degrees))
+  adversary.params$nonadv.control.exposure.neighbors <- as.vector(t(graph.properties$adj %*% t(control.nonadv) / graph.properties$degrees))
   
-  adversary.params$treatment.exposure.neighbors <-as.vector( t(adj %*% treatment.assignments / degrees))
-  adversary.params$influence.as.adversary <- colSums(transition)
+  adversary.params$treatment.exposure.neighbors <-as.vector( t(graph.properties$adj %*% treatment.assignments / graph.properties$degrees))
+  adversary.params$influence.as.adversary <- colSums(graph.properties$transition)
   
   return(adversary.params)
 }
 
-outcome.model <- function(outcome.params, treat, g, adversaries, adversary.params, stochastic.vars) { 
+outcome.model <- function(outcome.params, treat, graph.properties, adversaries, adversary.params, stochastic.vars) { 
   treated.adv <- treat * adversaries
   control.adv <- adversaries - treated.adv
   
-  n <- length(V(g))
-  degrees <- degree(g)
-  adj <- as.matrix(get.adjacency(g))  
-  
-  out.t0 <- matrix(0, 1, n)
-  out.t1 <- outcome.params$lambda_0 + outcome.params$lambda_1 * treat + outcome.params$lambda_2 * rowSums(adj %*% diag(as.numeric(out.t0)) / degrees) + stochastic.vars$t1
+  out.t0 <- matrix(0, 1, graph.properties$n)
+  out.t1 <- outcome.params$lambda_0 + outcome.params$lambda_1 * treat + outcome.params$lambda_2 * rowSums(graph.properties$adj %*% diag(as.numeric(out.t0)) / graph.properties$degrees) + stochastic.vars$t1
   #out.t1 <- (out.t1 > 0) + 0
   out.t1[which(adversaries==1)] <- adversary.params$model(treated.adv, control.adv, outcome.params)[which(adversaries==1)]
   
-  out.t2 <- outcome.params$lambda_0 + outcome.params$lambda_1 * treat + outcome.params$lambda_2 * rowSums(adj %*% diag(as.numeric(out.t1)) / degrees) + stochastic.vars$t2
+  out.t2 <- outcome.params$lambda_0 + outcome.params$lambda_1 * treat + outcome.params$lambda_2 * rowSums(graph.properties$adj %*% diag(as.numeric(out.t1)) / graph.properties$degrees) + stochastic.vars$t2
   #out.t2 <- (out.t2 > 0) + 0
   out.t2[which(adversaries == 1)] <- adversary.params$model(treated.adv, control.adv, outcome.params)[which(adversaries == 1)]
   
-  out.t3 <- outcome.params$lambda_0 + outcome.params$lambda_1 * treat + outcome.params$lambda_2 * rowSums(adj %*% diag(as.numeric(out.t2)) / degrees) + stochastic.vars$t3
+  out.t3 <- outcome.params$lambda_0 + outcome.params$lambda_1 * treat + outcome.params$lambda_2 * rowSums(graph.properties$adj %*% diag(as.numeric(out.t2)) / graph.properties$degrees) + stochastic.vars$t3
   #out.t3 <- (out.t3 > 0) + 0
   out.t3[which(adversaries == 1)] <- adversary.params$model(treated.adv, control.adv, outcome.params)[which(adversaries == 1)]
   
