@@ -149,7 +149,7 @@ calculate.ATE.various <- function(idx, graph.properties, adversaries, outcome.pa
   
   over.dom.max <- ifelse(adversary.params$setting == "dominating", FALSE, adversary.params$max.dom.adv < sum(adversaries))
   if(idx == 0) over.dom.max <- FALSE
-  ad.inf <- sum(adversary.params$influence.as.adversary[which(adversaries==1)])/graph.params$n
+  ad.inf <- sum(adversary.params$influence.as.adversary[which(adversaries==1)])/graph.properties$n
   
   method <- ifelse(adversary.params$setting=="dominating", adversary.params$weighting, adversary.params$setting)
   if(is.null(adversary.params$setting)) method <- "none"
