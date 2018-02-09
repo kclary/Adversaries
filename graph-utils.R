@@ -87,7 +87,17 @@ generate.graph <- function(graph.params) {
   
   if(graph.type == "forest-fire") { 
     bw.factor <- graph.params$backward.prob/graph.params$forward.prob
-    g <- forest.fire.game(n=graph.params$n, fw.prob = graph.params$forward.prob, bw.factor = bw.factor, directed = FALSE)  
+    
+    med_edges <- 0
+    if(graph.params$n == 500) med_edges <-2020
+    if(graph.params$n == 1000) med_edges <- 7650
+    if(graph.params$n == 5000) med_edges <- 186825
+    
+    edge_count <- 0
+    while(edge_count < (med_edges-med_edges*.1) | edge_count > (med_edges+med_edges*.1)) { 
+      g <- forest.fire.game(n=graph.params$n, fw.prob = graph.params$forward.prob, bw.factor = bw.factor, directed = FALSE)  
+      edge_count <- sum(get.adjacency(g))/2
+    }
   }
   
   if(graph.type == "polyblogs") { 
@@ -193,13 +203,12 @@ test.graph.properties <- function(graph.params) {
     g <- generate.graph(graph.params)  
     return(sum(get.adjacency(g))/2)
   })
-  #print(unlist(num.edges))
   print(median(unlist(num.edges)))
 }
 
 test.sbm.edges <- function() { 
   for(i in c(500,1000,5000)) { 
-    for(j in c(0.1, 0.3, 0.5)) { 
+    for(j in c(0.1, 0.2, 0.3)) { 
       graph.params <- sbm.params(i,j)  
       cat(paste("sbm", i, j))
       test.graph.properties(graph.params)
@@ -208,8 +217,8 @@ test.sbm.edges <- function() {
 }
 
 test.barabasi.edges <- function() { 
-  for(i in c(1000,5000)) { 
-    for(j in c(0.1, 0.2, 0.3)) { 
+  for(i in c(500,1000,5000)) { 
+    for(j in c(0.1, 0.3, 0.5)) { 
       graph.params <- barabasi.params(i,j)  
       cat(paste("barabasi", i, j))
       test.graph.properties(graph.params)
@@ -232,17 +241,24 @@ test.sw.edges <- function() {
 }
 
 test.ff.edges <- function() { 
-  for(i in c(5000)) { 
-   # z <- 0
-  #  if(i == 500) z <- 4
-   # if(i == 1000) z <- 8
-  #  if(i == 5000) z <- 37
-    for(j in c(0.36, 0.365, 0.37, 0.38)) { 
-      for(k in c(0.36, 0.365, 0.34, 0.35, .34, 0.37)) { 
-        graph.params <- ff.params(i, j, k)  
-        cat(paste("ff", i, j, k))
-        test.graph.properties(graph.params)
-      }
+  for(i in c(500, 1000, 5000)) { 
+    fw <- 0
+    bw <- 0
+    
+    if(i == 500) { 
+      fw <- 0.36 
+      bw <- 0.34
     }  
+    if(i == 1000) { 
+      fw <- 0.36 
+      bw <- 0.365
+    } 
+    if(i == 5000) { 
+      fw <- 0.36 
+      bw <- 0.365
+    } 
+    graph.params <- ff.params(i, fw, bw)  
+    cat(paste("ff", i, fw, bw))
+    test.graph.properties(graph.params)
   }
 }
