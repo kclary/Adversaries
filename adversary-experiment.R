@@ -31,7 +31,7 @@ adversary.experiment <- function(graph.params, clustering, adversary.params, out
   g <- generate.graph(graph.params)
   graph.properties <- get.graph.properties(g)
   
-  avg.degree <- mean(graph.properties$degree)
+  avg.degree <- mean(graph.properties$degrees)
   
   # generate graph clustering
   clusters <- generate.clusters(graph.properties$g, clustering)
@@ -46,50 +46,29 @@ adversary.experiment <- function(graph.params, clustering, adversary.params, out
   bias.behavior <- data.frame(index=numeric(), size.of.dom=logical(), method=character(), pt.uncovered=numeric(), adversary.influence=numeric(), ATE.true=numeric(), ATE.adv.est=numeric(), ATE.adv.gui=numeric(), gui.beta=numeric(), gui.gamma=numeric(), stringsAsFactors=FALSE)
   nonadv.ATE <- as.numeric(calculate.ATE.various(0, graph.properties, matrix(0,1,graph.properties$n), outcome.params, adversary.params, treatment.assignments, stochastic.vars, bias.behavior)$ATE.adv.gui[1])
   
-  if(!adversary.params$all) { 
-    adversary.params$setting <- "dominating"
-    adversary.params$weighting <- "influence"
-    adversary.params$max <- TRUE
-    dominating.adversaries.inf <- unlist(list(determine.adversaries(graph.properties, adversary.params)))
-    adversary.params$max.dom.adv <- sum(dominating.adversaries.inf)
+  adversary.params$setting <- "dominating"
+  adversary.params$max <- TRUE
+  adversary.params$weighting <- "degree"
+  dominating.adversaries.deg <- unlist(list(determine.adversaries(graph.properties, adversary.params)))
+  adversary.params$max.dom.adv <- max(sum(dominating.adversaries.deg), adversary.params$max.dom.adv)
+  
+  adversary.params$max <- FALSE
+  # cycle through increasing numbers of adversaries
+  for(x in 1:sum(dominating.adversaries.deg == 1)) { 
+    # decide adversaries
+    adversary.params$num.adv <- x
+    adversaries <- matrix(0,1,n)
+    adversaries[which(dominating.adversaries.deg==1)[1:x]] <- 1
     
-    adversary.params$max <- FALSE
-    # cycle through increasing numbers of adversaries
-    for(x in 1:sum(dominating.adversaries.inf == 1)) { 
-      # decide adversaries
-      adversary.params$num.adv <- x
-      adversaries <- matrix(0,1,n)
-      adversaries[which(dominating.adversaries.inf==1)[1:x]] <- 1
-      
-      # compare to Gui estimator
-      bias.behavior <- calculate.ATE.various(x, g, adversaries, outcome.params, adversary.params, treatment.assignments, stochastic.vars, bias.behavior)
-    }
-    
-    adversary.params$setting <- "dominating"
-    adversary.params$max <- TRUE
-    adversary.params$weighting <- "degree"
-    dominating.adversaries.deg <- unlist(list(determine.adversaries(graph.properties, adversary.params)))
-    adversary.params$max.dom.adv <- max(sum(dominating.adversaries.deg), adversary.params$max.dom.adv)
-    
-    adversary.params$max <- FALSE
-    # cycle through increasing numbers of adversaries
-    for(x in 1:sum(dominating.adversaries.deg == 1)) { 
-      # decide adversaries
-      adversary.params$num.adv <- x
-      adversaries <- matrix(0,1,n)
-      adversaries[which(dominating.adversaries.deg==1)[1:x]] <- 1
-      
-      # compare to Gui estimator
-      bias.behavior <- calculate.ATE.various(x, g, adversaries, outcome.params, adversary.params, treatment.assignments, stochastic.vars, bias.behavior)
-    }
+    # compare to Gui estimator
+    bias.behavior <- calculate.ATE.various(x, graph.properties, adversaries, outcome.params, adversary.params, treatment.assignments, stochastic.vars, bias.behavior)
   }
   
   adversary.params$max <- TRUE
   adversary.params$setting <- "random"
   random.adversaries <- unlist(list(determine.adversaries(graph.properties, adversary.params)))
-  if(adversary.params$all) random.adversaries <- sample(1:graph.params$n, graph.params$n, replace=FALSE)
   
-  rand.size <- ifelse(adversary.params$all, graph.params$n, max(sum(dominating.adversaries.inf==1), sum(dominating.adversaries.deg==1)))
+  rand.size <- sum(dominating.adversaries.deg==1)
   
   for(x in 1:rand.size) {
     # decide adversaries
@@ -98,7 +77,7 @@ adversary.experiment <- function(graph.params, clustering, adversary.params, out
     adversaries[which(random.adversaries==1)[1:x]] <- 1
     
     # compare to Gui estimator
-    bias.behavior <- calculate.ATE.various(x, g, adversaries, outcome.params, adversary.params, treatment.assignments, stochastic.vars, bias.behavior)
+    bias.behavior <- calculate.ATE.various(x, graph.properties, adversaries, outcome.params, adversary.params, treatment.assignments, stochastic.vars, bias.behavior)
   }
   
   bias.behavior$index <- as.numeric(bias.behavior$index)
@@ -122,7 +101,7 @@ treatment.assignment <- function(g, clusters, prob=0.5) {
 determine.adversaries <- function(graph.properties, adversary.params) {
   adversaries <- matrix(0, 1, graph.properties$n)
   if(adversary.params$setting == "random") { 
-    rand.order <- sample(1:graph.properties$n, graph.properties$n)
+    rand.order <- sample(1:graph.properties$n, graph.properties$n, replace = FALSE)
     if(adversary.params$max) { 
       idx <- 1
       while(!check.dominating.set(graph.properties$g, adversaries)) { 
@@ -133,12 +112,11 @@ determine.adversaries <- function(graph.properties, adversary.params) {
     else adversaries[sample(1:n, adversary.params$num.adv, replace=FALSE)] <- 1
   }
   if(adversary.params$setting == "dominating") { 
-    if(adversary.params$weighting == "degree") { }
-    dominating.set <- dominate.greedy(graph.properties$g)
+    dominating.set <- dominate.greedy(graph.properties)
     if(adversary.params$max) adversary.params$num.adv <- length(dominating.set)
     adversaries[,sample(dominating.set, adversary.params$num.adv)] <- 1
   } else {
-    dominating.set <- dominate.greedy.inf(graph.properties$g)
+    dominating.set <- dominate.greedy.inf(graph.properties)
     if(adversary.params$max) adversary.params$num.adv <- length(dominating.set)
     adversaries[,sample(dominating.set, adversary.params$num.adv)] <- 1
   }
@@ -171,7 +149,7 @@ calculate.ATE.various <- function(idx, graph.properties, adversaries, outcome.pa
   
   over.dom.max <- ifelse(adversary.params$setting == "dominating", FALSE, adversary.params$max.dom.adv < sum(adversaries))
   if(idx == 0) over.dom.max <- FALSE
-  ad.inf <- sum(adversary.params$influence.as.adversary[which(adversaries==1)])/n
+  ad.inf <- sum(adversary.params$influence.as.adversary[which(adversaries==1)])/graph.params$n
   
   method <- ifelse(adversary.params$setting=="dominating", adversary.params$weighting, adversary.params$setting)
   if(is.null(adversary.params$setting)) method <- "none"
