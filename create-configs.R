@@ -2,26 +2,34 @@ library(grid)
 
 create.configurations <- function(base.dir=".") {
   sizes <- c(500, 1000, 5000)
-  graph.settings <- expand.grid(graph.type=c("small-world"), degree=5, p=c(0.03, 0.05, 0.1), power=NA, mu=NA, size=sizes)
-  graph.settings <- rbind(graph.settings, expand.grid(graph.type=c("barabasi-albert"), power=c(0.1, 0.3, 0.5), degree=NA, p=NA, mu=NA, size=sizes))
-  graph.settings <- rbind(graph.settings, expand.grid(graph.type=c("sbm"), mu=c(0.1, .2, .3), degree=NA, p=NA, power=NA, size=sizes))
+  graph.settings <- expand.grid(graph.type=c("small-world"), degree=5, p=c(0.03, 0.05, 0.1), power=NA, mu=NA, fw=NA, bw=NA, size=sizes)
+  graph.settings <- rbind(graph.settings, expand.grid(graph.type=c("barabasi-albert"), power=c(0.1, 0.3, 0.5), degree=NA, p=NA, mu=NA, fw=NA, bw=NA, size=sizes))
+  graph.settings <- rbind(graph.settings, expand.grid(graph.type=c("sbm"), mu=c(0.1, .2, .3), degree=NA, p=NA, power=NA, fw=NA, bw=NA, size=sizes))
+  
+  ff.settings <- expand.grid(graph.type=c("forest-fire"), mu=NA, degree=NA, p=NA, power=NA, size=sizes)
+  ff.settings$fw <- rep(.36, 3)
+  ff.settings$bw <- c(.34, 0.365, 0.365)
+  graph.settings <- rbind(graph.settings, ff.settings)
   graph.settings$graph.no <- 1:nrow(graph.settings)
   exp.settings.red <- expand.grid(lambda_0=-1.5, lambda_1=.75, lambda_2=.5)
   exp1 <- merge(graph.settings, exp.settings.red)
   write.csv(exp1, file.path(base.dir, "binary_networks/all_graph_configurations.csv"))
   
   exp.settings <- expand.grid(lambda_0=c(-1.5), lambda_1=c(0.25, 0.5, 0.75, 1), lambda_2=c(0, 0.1, 0.5, 1.0))
-  graph.settings.red <- expand.grid(graph.type="small-world", degree=5, p=0.05, power=NA, mu=NA, size=225)
-  graph.settings.red <- rbind(graph.settings.red, expand.grid(graph.type="barabasi-albert", power=0.3, degree=NA, p=NA, mu=NA, size=200))
-  graph.settings.red <- rbind(graph.settings.red, expand.grid(graph.type="sbm", mu=.2, degree=NA, p=NA, power=NA, size=sizes))
+  
+  graph.settings.red <- expand.grid(graph.type="small-world", degree=5, p=0.05, power=NA, mu=NA, fw=NA, bw=NA, size=1000)
+  graph.settings.red <- rbind(graph.settings.red, expand.grid(graph.type="barabasi-albert", power=0.3, degree=NA, p=NA, mu=NA, fw=NA, bw=NA, size=1000))
+  graph.settings.red <- rbind(graph.settings.red, expand.grid(graph.type="sbm", mu=.2, degree=NA, p=NA, power=NA, fw=NA, bw=NA, size=1000))
+  graph.settings.red <- rbind(graph.settings.red, subset(ff.settings, size==1000))
+  
   graph.settings.red <- merge(graph.settings, graph.settings.red, by=colnames(graph.settings.red))
-  
   exp2 <- merge(graph.settings.red, exp.settings)
-  exp2 <- subset(exp2, !(graph.no %in% exp1$graph.no & lambda_1 == 0.75 & lambda_2 == 0.5))
+  write.csv(exp2, file.path(base.dir, "all_adv_configurations.csv"))
+  #exp2 <- subset(exp2, !(graph.no %in% exp1$graph.no & lambda_1 == 0.75 & lambda_2 == 0.5))
   
-  all.settings <- rbind(exp1, exp2)
-  
-  write.csv(all.settings, file.path(base.dir, "all_adv_configurations.csv"))
+  #all.settings <- rbind(exp1, exp2)
+  all.settings <- merge(graph.settings, exp.settings)
+  write.csv(all.settings, file.path(base.dir, "all_adv_configurations_comb.csv"))
 }
 
 create.graph.inf.configurations <- function(base.dir=".") {
@@ -42,5 +50,5 @@ create.realworld.configurations <- function(base.dir=".") {
   exp.settings <- expand.grid(lambda_0=c(-1.5), lambda_1=c(0.25, 0.5, 0.75, 1), lambda_2=c(0, 0.1, 0.5, 1.0))
   all.settings <- merge(graph.settings, exp.settings)
   
-  write.csv(all.settings, file.path(base.dir, "all_adv_configurations.csv"))
+  write.csv(all.settings, file.path(base.dir, "all_adv_configurations_rw.csv"))
 }
