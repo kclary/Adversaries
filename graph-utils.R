@@ -129,9 +129,9 @@ generate.clusters <- function(g, clustering) {
   return(cluster_infomap(g)$membership)
 }
 
-dominate.greedy <- function(graph.properties,weight=NULL,proportion=1.0) {
+dominate.greedy <- function(graph.properties, weight=NULL,proportion=1.0) {
   A <- graph.properties$adj
-  od <- degree(graph.properties$g,mode="out")+1
+  od <- degree(graph.properties$g, mode="out")+1
   S <- NULL
   diag(A) <- 0
   n <- nrow(A)
@@ -152,10 +152,10 @@ dominate.greedy <- function(graph.properties,weight=NULL,proportion=1.0) {
   S
 }
 
-dominate.greedy.inf <- function(g,weight=NULL,proportion=1.0) {
-  A <- get.adjacency(g, sparse=FALSE)
+dominate.greedy.inf <- function(graph.properties,weight=NULL,proportion=1.0) {
+  A <- graph.properties$adj
   od <- degree(g,mode="out")
-  degree.inv <- diag(ifelse(od > 0, 1/od, 0))
+  degree.inv <- graph.properties$degree.inv
   od <- colSums(degree.inv %*% A)
   
   S <- NULL
