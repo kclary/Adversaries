@@ -21,7 +21,7 @@ get.graph.properties <- function(g) {
   graph.properties$adj <- get.adjacency(g, sparse=FALSE)
   
   graph.properties$degree.inv <- solve(diag(graph.properties$degrees))
-  graph.properties$transition <-  degree.inv %*% adj 
+  graph.properties$transition <-  graph.properties$degree.inv %*% adj 
   
   return(graph.properties)
 }
