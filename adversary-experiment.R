@@ -1,7 +1,7 @@
+library(plyr)
 library(dplyr)
 library(expm)
 library(reshape2)
-library(plyr)
 
 source("graph-utils.R")
 
