@@ -1,5 +1,3 @@
-library(ggplot2)
-
 source("adversary-experiment.R")
 
 test <- function() { 
@@ -15,7 +13,7 @@ test.all <- function(trials, all=FALSE) {
 }
 
 test.inf.distr <- function(trials=500) { 
-  configs <- read.csv("all_inf_graph_configurations.csv")
+  configs <- read.csv("binary_networks/all_graph_configurations.csv")
   graph.configs <- configs
   graph.configs[,c("X", "lambda_0", "lambda_1", "lambda_2")] <- NULL
   graph.configs <- unique(graph.configs)
@@ -57,9 +55,12 @@ test.inf.distr <- function(trials=500) {
     stat_density(geom="line")  + guides(color=guide_legend(title="p")) + xlab("Influence") + ylab("Density") + theme_bw()+ theme(legend.position="bottom") + theme(text = element_text(size = 15)) 
   ggplot(subset(all.infs, graph.type=="sbm"), aes(infs, color=as.factor(mu))) + 
     stat_density(geom="line") + guides(color=guide_legend(title=expression(mu))) + xlab("Influence") + ylab("Density") + theme_bw() + theme(legend.position="bottom") + theme(text = element_text(size = 15))
+  ggplot(subset(all.infs, graph.type=="forest-fire"), aes(infs)) + 
+    stat_density(geom="line") + xlab("Influence") + ylab("Density") + theme_bw() + theme(legend.position="bottom") + theme(text = element_text(size = 15))
   
-  ggplot(subset(all.infs, (graph.type=="barabasi-albert" & power==.3) | (graph.type=="sbm" & mu==.2) | (graph.type == "small-world" & p == 0.05)), aes(infs, graph.type, color=graph.type)) + 
-    geom_violin() + guides(color=guide_legend(title="graph type")) + xlab("Influence") + ylab("Density") + theme_bw()+ theme(text = element_text(size = 15)) + theme(legend.position="bottom") 
+  
+  ggplot(subset(all.infs, (graph.type=="barabasi-albert" & power==.3) | (graph.type=="sbm" & mu==.2) | (graph.type == "small-world" & p == 0.05) | (graph.type == "forest-fire")), aes(infs, color=graph.type)) + 
+    stat_density(geom="line") + guides(color=guide_legend(title="graph type")) + xlab("Influence") + ylab("Density") + theme_bw()+ theme(text = element_text(size = 15)) + theme(legend.position="bottom") + facet_wrap(~graph.type)
 }
 
 test.single.config <- function(idx, configs, trials, all=FALSE) { 
@@ -129,6 +130,7 @@ test.small.world <- function(trials) {
   bias.behavior.ATE$value <- as.numeric(bias.behavior.ATE$value)
   bias.behavior.ATE$adversary.influence <- as.numeric(bias.behavior.ATE$adversary.influence)
   
+  library(ggplot2)
   plot1 <- ggplot(subset(bias.behavior.ATE, variable=="ATE.adv.gui"), aes(adversary.influence, value, shape=variable, color=method)) + geom_point() + geom_abline(intercept = bias.behavior.ATE$ATE.true, slope=0)
   plot(plot1)
 }
