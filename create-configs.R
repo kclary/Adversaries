@@ -7,8 +7,8 @@ create.configurations <- function(base.dir=".") {
   graph.settings <- rbind(graph.settings, expand.grid(graph.type=c("sbm"), mu=c(0.1, .2, .3), degree=NA, p=NA, power=NA, fw=NA, bw=NA, size=sizes))
   
   ff.settings <- expand.grid(graph.type=c("forest-fire"), mu=NA, degree=NA, p=NA, power=NA, size=sizes)
-  ff.settings$fw <- rep(.36, 3)
-  ff.settings$bw <- c(.34, 0.365, 0.365)
+  ff.settings$fw <- c(.32, 0.37, 0.37)
+  ff.settings$bw <- c(.33, 0.33, 0.35)
   graph.settings <- rbind(graph.settings, ff.settings)
   graph.settings$graph.no <- 1:nrow(graph.settings)
   exp.settings.red <- expand.grid(lambda_0=-1.5, lambda_1=.75, lambda_2=.5)

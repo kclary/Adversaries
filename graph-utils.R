@@ -67,17 +67,17 @@ generate.graph <- function(graph.params) {
   graph.type <- graph.params$graph.type
   
   if(graph.type == "small-world") {
-    if(graph.params$n == 500) graph.params$degree <- 4
-    if(graph.params$n == 1000) graph.params$degree <- 8
-    if(graph.params$n == 5000) graph.params$degree <- 37
+    if(graph.params$n == 500) graph.params$degree <- 3
+    if(graph.params$n == 1000) graph.params$degree <- 5
+    if(graph.params$n == 5000) graph.params$degree <- 25
     
     g <- watts.strogatz.game(1, graph.params$n, graph.params$degree, graph.params$p)
   }
   
   if(graph.type == "barabasi-albert") { 
-    if(graph.params$n == 500) add.edges <- rbinom(graph.params$n, 1, 0.1)+4
-    if(graph.params$n == 1000) add.edges <- rbinom(graph.params$n, 1, 0.1)+8
-    if(graph.params$n == 5000) add.edges <- rbinom(graph.params$n, 1, 0.1)+37
+    if(graph.params$n == 500) add.edges <- rbinom(graph.params$n, 1, 0.7)+2
+    if(graph.params$n == 1000) add.edges <- rbinom(graph.params$n, 1, 0.7)+4
+    if(graph.params$n == 5000) add.edges <- rbinom(graph.params$n, 1, 0.9)+24
     
     g <- barabasi.game(graph.params$n, graph.params$power, out.seq=add.edges, directed=FALSE)    
   }
@@ -93,9 +93,9 @@ generate.graph <- function(graph.params) {
     bw.factor <- graph.params$backward.prob/graph.params$forward.prob
     
     med_edges <- 0
-    if(graph.params$n == 500) med_edges <-2020
-    if(graph.params$n == 1000) med_edges <- 7650
-    if(graph.params$n == 5000) med_edges <- 186825
+    if(graph.params$n == 500) med_edges <- 1370
+    if(graph.params$n == 1000) med_edges <- 4697
+    if(graph.params$n == 5000) med_edges <- 124428
     
     edge_count <- 0
     while(edge_count < (med_edges-med_edges*.1) | edge_count > (med_edges+med_edges*.1)) { 
@@ -158,7 +158,7 @@ dominate.greedy <- function(graph.properties, weight=NULL,proportion=1.0) {
 
 dominate.greedy.inf <- function(graph.properties,weight=NULL,proportion=1.0) {
   A <- graph.properties$adj
-  od <- degree(g,mode="out")
+  od <- degree(graph.properties$g,mode="out")
   degree.inv <- graph.properties$degree.inv
   od <- colSums(degree.inv %*% A)
   
@@ -175,7 +175,7 @@ dominate.greedy.inf <- function(graph.properties,weight=NULL,proportion=1.0) {
     covered[i] <- 1
     S <- c(S,i)
     
-    od <- degree(g,mode="out")
+    od <- degree(graph.properties$g,mode="out")
     degree.inv <- diag(ifelse(od > 0, 1/od, 0))
     trans <- degree.inv %*% A
     trans[,S] <- 0
@@ -245,22 +245,23 @@ test.sw.edges <- function() {
 }
 
 test.ff.edges <- function() { 
-  for(i in c(500, 1000, 5000)) { 
+  for(i in c(1000)) { 
     fw <- 0
     bw <- 0
     
     if(i == 500) { 
-      fw <- 0.36 
-      bw <- 0.34
+      fw <- 0.32
+      bw <- 0.33
     }  
     if(i == 1000) { 
-      fw <- 0.36 
-      bw <- 0.365
+      fw <- 0.37
+      bw <- 0.33
     } 
     if(i == 5000) { 
-      fw <- 0.36 
-      bw <- 0.365
+      fw <- 0.37 
+      bw <- 0.35
     } 
+    
     graph.params <- ff.params(i, fw, bw)  
     cat(paste("ff", i, fw, bw))
     test.graph.properties(graph.params)
