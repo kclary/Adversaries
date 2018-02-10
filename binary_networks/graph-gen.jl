@@ -3,7 +3,7 @@ using Graphs
 function create_graphs(i)
 	graph_params = readdlm("all_graph_configurations.csv", ',')
 
-	n = graph_params[i,7]
+	n = graph_params[i,9]
 	graph_type = graph_params[i,2]
 
 	if graph_type == "sbm"
@@ -26,8 +26,8 @@ int n: number of nodes"
 float mu: inter-community mixing parameter=#
 function create_network(n, mu, netfile)
 	"generate network with SBM benchmark suite from Lancichinetti, Fortunato (2009)"
-	avgd = ceil(15/1000*n)
-	maxd = (50/1000*n)
+	avgd = ceil(10/1000*n)
+	maxd = (100/1000*n)
 	readall(`./benchmark -N $n -k $avgd -maxk $maxd -mu $mu`)
 
 	adj = round(Int64, open(readdlm, "network.dat"))
