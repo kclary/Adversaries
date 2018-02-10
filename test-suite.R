@@ -101,7 +101,7 @@ test.single.config <- function(idx, configs, trials, all=FALSE) {
   bias.behavior.ATE$adv.bias <- bias.behavior.ATE$nonadv.ATE - bias.behavior.ATE$ATE.adv.gui
   
   results <- rbind(results, bias.behavior.ATE)
-  write.csv(results, paste0("results/adversary-results-", idx, ".csv"))
+  write.csv(results, paste0("results/adversary-results-", graph.params$graph.type, "-", idx, ".csv"))
 }
 
 test.small.world <- function(trials) { 
