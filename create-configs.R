@@ -44,10 +44,10 @@ create.graph.inf.configurations <- function(base.dir=".") {
   write.csv(all.settings, file.path(base.dir, "all_inf_graph_configurations2.csv"))
 }
 
-create.realworld.configurations <- function(base.dir=".") {
-  graph.settings <- expand.grid(graph.type=c("polyblogs", "facebook"), degree=NA, p=NA, power=NA, mu=NA, size=NA)
+create.fb.configurations <- function(base.dir=".") {
+  graph.settings <- expand.grid(graph.type=c("facebook"), degree=NA, p=NA, power=NA, mu=NA, size=NA)
   graph.settings$graph.no <- 1:nrow(graph.settings)
-  exp.settings <- expand.grid(lambda_0=c(-1.5), lambda_1=c(0.25, 0.5, 0.75, 1), lambda_2=c(0, 0.1, 0.5, 1.0))
+  exp.settings <- expand.grid(lambda_0=c(0), lambda_1=c(1.845e-4, 1.929e-04, 1.995e-4), lambda_2=c(1.086e-3, 1.111e-3, 1.136e-3))
   all.settings <- merge(graph.settings, exp.settings)
   
   write.csv(all.settings, file.path(base.dir, "all_adv_configurations_rw.csv"))
