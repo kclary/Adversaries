@@ -65,6 +65,7 @@ test.inf.distr <- function(trials=500) {
 
 test.single.config <- function(idx, configs, trials, all=FALSE) { 
   cat("Running", idx, "\n")
+  print(configs[idx,])
   
   results <- data.frame(index=numeric(), size.of.dom=logical(), method=character(), 
                         pt.uncovered=numeric(), adversary.influence=numeric(), ATE.true=numeric(), 
