@@ -67,6 +67,10 @@ generate.graph <- function(graph.params) {
   graph.type <- graph.params$graph.type
   
   if(graph.type == "small-world") {
+    if(i == 500) graph.params$degree <- 4
+    if(i == 1000) graph.params$degree <- 8
+    if(i == 5000) graph.params$degree <- 37
+    
     g <- watts.strogatz.game(1, graph.params$n, graph.params$degree, graph.params$p)
   }
   
