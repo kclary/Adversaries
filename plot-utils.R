@@ -35,25 +35,25 @@ plot.increase.ATE.bias <- function(res, g.type) {
   #res <- read.csv("adversary-results-revised.csv")
   #res2 <- read.csv("adversary-results-revised-sbm.csv")
   #res <- rbind(res, res2)
-  res <- read.csv("results/adversary-results-fixed-inf-large.csv")
+  res <- read.csv("results/all-results.csv")
   
   res$bias <- res$ATE.true - res$ATE.adv.gui
   res$est.diff <- res$nonadv.ATE - res$ATE.adv.gui
   res$bias.norm <- res$bias / res$ATE.true
   res$diff.norm <- res$est.diff / res$nonadv.ATE
   
-  res <- subset(res, method != "degree")
-  res$method <- ifelse(res$method == "random", "random", "dominating")
+  #res <- subset(res, method != "degree")
+  #res$method <- ifelse(res$method == "random", "random", "dominating")
   res$graph.type <- ifelse(res$graph.type == "barabasi-albert", "scale-free", as.character(res$graph.type))
   res$graph.type <- ifelse(res$graph.type == "sbm", "SBM", as.character(res$graph.type))
   res$lambda_1_lab <- paste0("\u03BB_1 = ", as.character(res$lambda_1))
   res$lambda_2_lab <- paste0("\u03BB_2 = ", as.character(res$lambda_2))
   
   #res <- subset(res, !(graph.type == "small-world" & index > 28))
-  res <- subset(res, !(graph.type == "small-world" & index > 64))
+  #res <- subset(res, !(graph.type == "small-world" & index > 64))
   #res <- subset(res, !(graph.type == "scale-free" & index > 80))
-  res <- subset(res, !(graph.type == "scale-free" & index > 186))
-  res <- subset(res, !(graph.type == "SBM" & index > 45))
+  #res <- subset(res, !(graph.type == "scale-free" & index > 186))
+  #res <- subset(res, !(graph.type == "SBM" & index > 45))
   res$pt.adversaries <- res$index / res$n
   
   #remove late indices
@@ -109,7 +109,15 @@ plot.increase.ATE.bias <- function(res, g.type) {
     theme(axis.text.x = element_text(angle = 70, hjust = 1))
   plot(plot8) 
   
-  res$graph.type <- factor(res$graph.type, levels=c("SBM", "small-world", "scale-free"))
+  df <- subset(res, size.of.dom==FALSE & graph.type == "forest-fire")
+  plot8 <- ggplot(df, aes(pt.adversaries, diff.norm, color=method)) + geom_smooth() + facet_grid(lambda_1_lab ~ lambda_2_lab) + 
+    xlab("Adversarial fraction of network") + ylab("Bias in Estimated ATE / Estimated nonadversarial ATE") + 
+    geom_abline(slope=0) + theme_bw() + theme(text = element_text(size = 15)) + 
+    theme(legend.position="bottom") + guides(color=guide_legend(override.aes=list(fill=NA))) + 
+    theme(axis.text.x = element_text(angle = 70, hjust = 1))
+  plot(plot8) 
+  
+  res$graph.type <- factor(res$graph.type, levels=c("SBM", "small-world", "scale-free", "forest-fire"))
   
   plot5 <- ggplot(subset(res, size.of.dom==FALSE), aes(pt.adversaries, adversary.influence, color=method)) + 
     geom_smooth() + xlab("Adversarial fraction of network") + ylab("Adversary influence") + 
