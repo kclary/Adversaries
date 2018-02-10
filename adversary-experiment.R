@@ -57,7 +57,7 @@ adversary.experiment <- function(graph.params, clustering, adversary.params, out
   for(x in 1:sum(dominating.adversaries.deg == 1)) { 
     # decide adversaries
     adversary.params$num.adv <- x
-    adversaries <- matrix(0,1,n)
+    adversaries <- matrix(0,1,graph.properties$n)
     adversaries[which(dominating.adversaries.deg==1)[1:x]] <- 1
     
     # compare to Gui estimator
@@ -66,14 +66,17 @@ adversary.experiment <- function(graph.params, clustering, adversary.params, out
   
   adversary.params$max <- TRUE
   adversary.params$setting <- "random"
-  random.adversaries <- unlist(list(determine.adversaries(graph.properties, adversary.params)))
   
+  #random.adversaries <- unlist(list(determine.adversaries(graph.properties, adversary.params)))
   rand.size <- sum(dominating.adversaries.deg==1)
+  random.selection <- sample(1:graph.properties$n, rand.size)
+  random.adversaries <- matrix(0,1,graph.properties$n)
+  random.adversaries[random.selection] <- 1
   
   for(x in 1:rand.size) {
     # decide adversaries
     adversary.params$num.adv <- x
-    adversaries <- matrix(0,1,n)
+    adversaries <- matrix(0,1,graph.properties$n)
     adversaries[which(random.adversaries==1)[1:x]] <- 1
     
     # compare to Gui estimator
@@ -104,7 +107,7 @@ determine.adversaries <- function(graph.properties, adversary.params) {
     rand.order <- sample(1:graph.properties$n, graph.properties$n, replace = FALSE)
     if(adversary.params$max) { 
       idx <- 1
-      while(!check.dominating.set(graph.properties$g, adversaries)) { 
+      while(!check.dominating.set(graph.properties, adversaries)) { 
         adversaries[rand.order[idx]] <- 1
         idx <- idx + 1
       }  
