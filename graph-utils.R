@@ -118,6 +118,7 @@ generate.graph <- function(graph.params) {
     adj <- matrix(0, graph.params$n, graph.params$n)
     for(i in 1:dim(edg)[1]) adj[edg[i,1],edg[i,2]] <- 1
     g <- graph_from_adjacency_matrix(adj)
+    g <- as.undirected(g)
   }
   
   return(g)
