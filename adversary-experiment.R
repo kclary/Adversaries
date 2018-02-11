@@ -35,6 +35,7 @@ adversary.experiment <- function(graph.params, clustering, adversary.params, out
   
   # generate graph clustering
   clusters <- generate.clusters(graph.properties$g, clustering)
+  if(sum(clusters==1)==graph.properties$n) stop("Only one cluster found")
   
   # assign treatment 
   treatment <- treatment.assignment(graph.properties$g, clusters)
