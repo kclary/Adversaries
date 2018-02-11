@@ -44,11 +44,11 @@ adversary.experiment <- function(graph.params, clustering, adversary.params, out
   
   # prepre outcome model parameters
   if(graph.params$graph.type=="facebook") { 
-    sd.noise <- 0.00001
+    noise <- FALSE
   } else { 
-    sd.noise <- 0.1
+    noise <- TRUE
   }
-  stochastic.vars <- get.stochastic.vars(graph.properties$n, 3, sd.noise, TRUE)
+  stochastic.vars <- get.stochastic.vars(graph.properties$n, 3, 0.1, noise)
   
   bias.behavior <- data.frame(index=numeric(), size.of.dom=logical(), method=character(), pt.uncovered=numeric(), adversary.influence=numeric(), ATE.true=numeric(), ATE.adv.est=numeric(), ATE.adv.gui=numeric(), gui.beta=numeric(), gui.gamma=numeric(), stringsAsFactors=FALSE)
   nonadv.ATE <- as.numeric(calculate.ATE.various(0, graph.properties, matrix(0,1,graph.properties$n), outcome.params, adversary.params, treatment.assignments, stochastic.vars, bias.behavior)$ATE.adv.gui[1])
