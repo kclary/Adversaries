@@ -80,9 +80,10 @@ test.single.config <- function(idx, configs, trials, all=FALSE) {
   adversary.params$model <- reduction.adv.model
   adversary.params$all <- all
   outcome.params <- build.outcome.params(configs[idx,"lambda_0"], configs[idx,"lambda_1"], configs[idx,"lambda_2"], configs[idx,"sd.noise"])
+  clustering <- "infomap"
   
   cat("trial", 1, "\n")
-  bias.behavior.ATE <- adversary.experiment(graph.params, "infomap", adversary.params, outcome.params)
+  bias.behavior.ATE <- adversary.experiment(graph.params, clustering, adversary.params, outcome.params)
   
   for(i in 2:trials) {
     graph.params$ind <- i
