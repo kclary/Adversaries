@@ -49,7 +49,7 @@ adversary.experiment <- function(graph.params, clustering, adversary.params, out
   
   adversary.params$setting <- "dominating"
   adversary.params$max <- TRUE
-  adversary.params$weighting <- "degree"
+  adversary.params$weighting <- "influence"
   dominating.adversaries.deg <- unlist(list(determine.adversaries(graph.properties, adversary.params)))
   adversary.params$max.dom.adv <- max(sum(dominating.adversaries.deg), adversary.params$max.dom.adv)
   
@@ -105,24 +105,36 @@ treatment.assignment <- function(g, clusters, prob=0.5) {
 determine.adversaries <- function(graph.properties, adversary.params) {
   adversaries <- matrix(0, 1, graph.properties$n)
   if(adversary.params$setting == "random") { 
-    rand.order <- sample(1:graph.properties$n, graph.properties$n, replace = FALSE)
-    if(adversary.params$max) { 
-      idx <- 1
-      while(!check.dominating.set(graph.properties, adversaries)) { 
-        adversaries[rand.order[idx]] <- 1
-        idx <- idx + 1
-      }  
+    if(adversary.params$weighting == "inf") { 
+      infs <- colSums(graph.properties$transition)
+      if(adversary.params$max) { 
+          ii <- 1
+          while(!check.dominating.set(graph.properties, adversaries)) { 
+            adversaries[infs[order(infs, decreasing = TRUE)]]  
+          }
+      }
+    } else { 
+      rand.order <- sample(1:graph.properties$n, graph.properties$n, replace = FALSE)
+      if(adversary.params$max) { 
+        idx <- 1
+        while(!check.dominating.set(graph.properties, adversaries)) { 
+          adversaries[rand.order[idx]] <- 1
+          idx <- idx + 1
+        }  
     }
-    else adversaries[sample(1:n, adversary.params$num.adv, replace=FALSE)] <- 1
+      else adversaries[sample(1:n, adversary.params$num.adv, replace=FALSE)] <- 1
+    }
   }
-  if(adversary.params$setting == "dominating") { 
-    dominating.set <- dominate.greedy(graph.properties)
-    if(adversary.params$max) adversary.params$num.adv <- length(dominating.set)
-    adversaries[,sample(dominating.set, adversary.params$num.adv)] <- 1
-  } else {
-    dominating.set <- dominate.greedy.inf(graph.properties)
-    if(adversary.params$max) adversary.params$num.adv <- length(dominating.set)
-    adversaries[,sample(dominating.set, adversary.params$num.adv)] <- 1
+  if(adversary.params$setting == "dominating") {
+    if(adversary.params$weighting == "degree"){
+      dominating.set <- dominate.greedy(graph.properties)
+      if(adversary.params$max) adversary.params$num.adv <- length(dominating.set)
+      adversaries[,sample(dominating.set, adversary.params$num.adv)] <- 1
+    } else {
+      dominating.set <- dominate.greedy.inf(graph.properties)
+      if(adversary.params$max) adversary.params$num.adv <- length(dominating.set)
+      adversaries[,sample(dominating.set, adversary.params$num.adv)] <- 1
+    }
   }
   return(adversaries)
 }
