@@ -2,9 +2,9 @@ library(grid)
 
 create.configurations <- function(base.dir=".") {
   sizes <- c(500, 1000, 5000)
-  graph.settings <- expand.grid(graph.type=c("small-world"), degree=5, p=c(0.03, 0.05, 0.1), power=NA, mu=NA, fw=NA, bw=NA, size=sizes)
-  graph.settings <- rbind(graph.settings, expand.grid(graph.type=c("barabasi-albert"), power=c(0.1, 0.3, 0.5), degree=NA, p=NA, mu=NA, fw=NA, bw=NA, size=sizes))
-  graph.settings <- rbind(graph.settings, expand.grid(graph.type=c("sbm"), mu=c(0.1, .2, .3), degree=NA, p=NA, power=NA, fw=NA, bw=NA, size=sizes))
+  graph.settings <- expand.grid(graph.type=c("small-world"), degree=5, p=c(0.05), power=NA, mu=NA, fw=NA, bw=NA, size=sizes)
+  #graph.settings <- rbind(graph.settings, expand.grid(graph.type=c("barabasi-albert"), power=c(0.1, 0.3, 0.5), degree=NA, p=NA, mu=NA, fw=NA, bw=NA, size=sizes))
+  graph.settings <- rbind(graph.settings, expand.grid(graph.type=c("sbm"), mu=c(0.2), degree=NA, p=NA, power=NA, fw=NA, bw=NA, size=sizes))
   
   ff.settings <- expand.grid(graph.type=c("forest-fire"), mu=NA, degree=NA, p=NA, power=NA, size=sizes)
   ff.settings$fw <- c(.32, 0.37, 0.37)
@@ -18,7 +18,7 @@ create.configurations <- function(base.dir=".") {
   exp.settings <- expand.grid(lambda_0=c(-1.5), lambda_1=c(0.25, 0.5, 0.75, 1), lambda_2=c(0, 0.1, 0.5, 1.0))
   
   graph.settings.red <- expand.grid(graph.type="small-world", degree=5, p=0.05, power=NA, mu=NA, fw=NA, bw=NA, size=1000)
-  graph.settings.red <- rbind(graph.settings.red, expand.grid(graph.type="barabasi-albert", power=0.3, degree=NA, p=NA, mu=NA, fw=NA, bw=NA, size=1000))
+  #graph.settings.red <- rbind(graph.settings.red, expand.grid(graph.type="barabasi-albert", power=0.3, degree=NA, p=NA, mu=NA, fw=NA, bw=NA, size=1000))
   graph.settings.red <- rbind(graph.settings.red, expand.grid(graph.type="sbm", mu=.2, degree=NA, p=NA, power=NA, fw=NA, bw=NA, size=1000))
   graph.settings.red <- rbind(graph.settings.red, subset(ff.settings, size==1000))
   
@@ -29,6 +29,7 @@ create.configurations <- function(base.dir=".") {
   
   #all.settings <- rbind(exp1, exp2)
   all.settings <- merge(graph.settings, exp.settings)
+  #all.settings <- subset(all.settings, !(lambda_1==0.75 & lambda_2==0.5))
   write.csv(all.settings, file.path(base.dir, "all_adv_configurations_comb.csv"))
 }
 
