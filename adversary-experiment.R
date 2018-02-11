@@ -49,8 +49,12 @@ adversary.experiment <- function(graph.params, clustering, adversary.params, out
   
   adversary.params$setting <- "dominating"
   adversary.params$max <- TRUE
-  adversary.params$weighting <- "influence"
-  dominating.adversaries.deg <- unlist(list(determine.adversaries(graph.properties, adversary.params)))
+  adversary.params$weighting <- "degree"
+  if(graph.params$graph.type=="facebook") { 
+    dominating.adversaries.deg <- readRDS("facebook-dom.rds")
+  } else { 
+    dominating.adversaries.deg <- unlist(list(determine.adversaries(graph.properties, adversary.params)))
+  }
   adversary.params$max.dom.adv <- max(sum(dominating.adversaries.deg), adversary.params$max.dom.adv)
   
   adversary.params$max <- FALSE
