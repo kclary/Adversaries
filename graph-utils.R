@@ -119,6 +119,11 @@ generate.graph <- function(graph.params) {
     for(i in 1:dim(edg)[1]) adj[edg[i,1],edg[i,2]] <- 1
     g <- graph_from_adjacency_matrix(adj)
     g <- as.undirected(g)
+    
+    ego.set <- c(108, 3438, 1, 1685, 1913, 349, 415, 3981, 687, 699)
+    g2 <- delete_vertices(g, ego.set)
+    c1 <- components(g2)
+    g <- induced_subgraph(g2, which(c1$membership == which.max(c1$csize)))
   }
   
   return(g)
