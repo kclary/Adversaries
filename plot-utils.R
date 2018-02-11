@@ -45,8 +45,8 @@ plot.increase.ATE.bias <- function(res, g.type) {
   
   #res <- subset(res, method != "degree")
   res$method <- ifelse(res$method == "random", "random", "dominating")
-  res$graph.type <- ifelse(res$graph.type == "barabasi-albert", "scale-free", as.character(res$graph.type))
   res$graph.type <- ifelse(res$graph.type == "sbm", "SBM", as.character(res$graph.type))
+  
   res$lambda_1_lab <- paste0("\u03BB_1 = ", as.character(res$lambda_1))
   res$lambda_2_lab <- paste0("\u03BB_2 = ", as.character(res$lambda_2))
   res$pt.adversaries <- res$index / res$n
