@@ -30,6 +30,7 @@ adversary.experiment <- function(graph.params, clustering, adversary.params, out
   # generate graph structure
   g <- generate.graph(graph.params)
   graph.properties <- get.graph.properties(g)
+  graph.params$n <- graph.properties$n
   
   avg.degree <- mean(graph.properties$degrees)
   
@@ -51,7 +52,11 @@ adversary.experiment <- function(graph.params, clustering, adversary.params, out
   adversary.params$max <- TRUE
   adversary.params$weighting <- "degree"
   if(graph.params$graph.type=="facebook") { 
-    dominating.adversaries.deg <- readRDS("facebook-dom.rds")
+    adversaries <- matrix(0, 1, graph.properties$n)
+    dominating.adversaries.load <- readRDS("facebook-dom.rds")
+    adversary.params$num.adv <- length(dominating.adversaries.load)
+    adversaries[,sample(dominating.adversaries.load, adversary.params$num.adv)] <- 1
+    dominating.adversaries.deg <- adversaries
   } else { 
     dominating.adversaries.deg <- unlist(list(determine.adversaries(graph.properties, adversary.params)))
   }
