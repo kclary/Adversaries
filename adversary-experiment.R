@@ -58,7 +58,7 @@ adversary.experiment <- function(graph.params, clustering, adversary.params, out
   adversary.params$weighting <- "degree"
   if(graph.params$graph.type=="facebook") { 
     adversaries <- matrix(0, 1, graph.properties$n)
-    dominating.adversaries.load <- readRDS("facebook-dom.rds")
+    dominating.adversaries.load <- c(108, 3438, 1, 1685, 1913, 349, 415, 3981, 687, 699)
     adversary.params$num.adv <- length(dominating.adversaries.load)
     adversaries[,sample(dominating.adversaries.load, adversary.params$num.adv)] <- 1
     dominating.adversaries.deg <- adversaries
