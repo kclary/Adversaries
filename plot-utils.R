@@ -13,23 +13,30 @@ prepare.for.plots <- function(g, adversaries, adversary.exposure, treatment.assi
 }
 
 plot.realworld.ATE.bias <- function() { 
-  res <- read.csv("adversary-results-polyblog.csv")  
-  res$X <- NULL
-  res.1 <- subset(res, variable=="ATE.adv.gui")
-  res.1 <- rename(res.1, c("value"="ATE.adv.gui"))
-  res.1$variable <- NULL
+  res <- read.csv("results/all-results-facebook-zero.txt") 
+  res$n <- 3732
   
-  res.2 <- subset(res, variable=="ATE.adv.est")
-  res.2 <- rename(res.2, c("value"="ATE.adv.est"))
-  res.2$variable <- NULL
+  res$bias <- res$ATE.true - res$ATE.adv.gui
+  res$est.diff <- res$nonadv.ATE - res$ATE.adv.gui
+  res$bias.norm <- res$bias / res$ATE.true
+  res$diff.norm <- res$est.diff / res$nonadv.ATE
   
-  res2 <- merge(res.1, res.2, by=c("index", "method", "size.of.dom", "pt.uncovered", 
-                                   "adversary.influence",  "ATE.true", "pt.covered", "n", "graph.type", "power", "p", "mu", "ncoms", "maxc", "minc", "lambda_0", "lambda_1", "lambda_2"))
-  res2$bias <- res2$ATE.true - res2$ATE.adv.gui
-  res.plot <- subset(res2, method != "influence" & size.of.dom==FALSE)
-  ggplot(res.plot, aes(index, bias, color=method)) + geom_point()
+  res$method <- ifelse(res$method == "random", "random", "dominating")
   
+  res$lambda_1_lab <- paste0("\u03BB_1 = ", as.character(res$lambda_1))
+  res$lambda_2_lab <- paste0("\u03BB_2 = ", as.character(res$lambda_2))
+  res$pt.adversaries <- res$index / res$n
+  
+  plot1 <- ggplot(res, aes(pt.adversaries, diff.norm, color=method)) + 
+    geom_smooth() + facet_grid(lambda_1_lab ~ lambda_2_lab) + 
+    xlab("Adversarial fraction of network") + ylab("Bias in Estimated ATE / Estimated nonadversarial ATE") +  
+    theme_bw()+ theme(text = element_text(size = 15)) + theme(legend.position="bottom") +
+    guides(color=guide_legend(override.aes=list(fill=NA))) + 
+    theme(axis.text.x = element_text(angle = 70, hjust = 1))
+  plot(plot1)
 }
+
+
 
 plot.increase.ATE.bias <- function(res, g.type) {
   #res <- read.csv("adversary-results-revised.csv")
@@ -52,33 +59,21 @@ plot.increase.ATE.bias <- function(res, g.type) {
   res$pt.adversaries <- res$index / res$n
   
   #remove late indices
-  res <- subset(res, !(graph.type == "forest-fire" & index > 260))
-  res <- subset(res, !(graph.type == "small-world" & index > 126))
-  res <- subset(res, !(graph.type == "SBM" & index > 88))
+  res <- subset(res, !(graph.type == "forest-fire" & index > 350 & res$n==1000))
+  res <- subset(res, !(graph.type == "small-world" & index > 233 & res$n==1000))
+  res <- subset(res, !(graph.type == "SBM" & index > 245 & res$n==1000))
   
-  # remove either degree or influence 
+   #res <- subset(res, !(graph.type == "forest-fire" & index > 350))
+  res <- subset(res, !(graph.type == "small-world" & index > 160 & res$n==5000))
+  res <- subset(res, !(graph.type == "SBM" & index > 51 & res$n==5000))
   
-  df <- subset(res, graph.type == "scale-free")
-  #stats.barabasi <- df[,c("method", "lambda_1", "lambda_2", "index", "power", "diff.norm")] %>% group_by(method, lambda_1, lambda_2, index, power) %>% summarize_each_(funs(mean, sd, median, n), vars="diff.norm") 
-  plot1 <- ggplot(subset(df, lambda_1 == 0.75 & lambda_2 == 0.5), aes(pt.adversaries, diff.norm, color=method)) + 
-    geom_smooth() + facet_wrap(~power) + xlab("Adversarial fraction of network") + 
-    ylab("Bias in estimated ATE / Estimated nonadversarial ATE") + geom_abline(slope=0) + 
-    theme_bw()+ theme(text = element_text(size = 15)) + theme(legend.position="bottom") + guides(color=guide_legend(override.aes=list(fill=NA))) + 
-    theme(axis.text.x = element_text(angle = 70, hjust = 1))
-  plot(plot1)
-  
-  plot4 <- ggplot(df, aes(pt.adversaries, diff.norm, color=method)) + geom_smooth() + facet_grid(lambda_1_lab ~ lambda_2_lab) + 
-    xlab("Adversarial fraction of network") + ylab("Bias in Estimated ATE / Estimated nonadversarial ATE") + 
-    geom_abline(slope=0) + theme_bw()+ theme(text = element_text(size = 15)) + theme(legend.position="bottom") +
-    guides(color=guide_legend(override.aes=list(fill=NA))) + 
-    theme(axis.text.x = element_text(angle = 70, hjust = 1))
-  plot(plot4) 
+  res <- subset(res, !(graph.type == "forest-fire" & index > 180 & res$n==500))
+  res <- subset(res, !(graph.type == "small-world" & index > 143 & res$n==500))
+  res <- subset(res, !(graph.type == "SBM" & index > 143 & res$n==500))
   
   df <- subset(res, size.of.dom==FALSE & graph.type == "small-world")
-  #stats.sw <- df[,c("method", "lambda_1", "lambda_2", "index", "p", "diff.norm")] %>% group_by(method, lambda_1, lambda_2, index, p) %>% summarize_each_(funs(mean, sd, median), vars="diff.norm") 
-  #stats.sw <- subset(stats.sw, index < 31)
   plot2 <- ggplot(subset(df, lambda_1 == 0.75 & lambda_2 == 0.5), aes(pt.adversaries, diff.norm, color=method)) + 
-    geom_smooth() + facet_wrap(~p) + xlab("Adversarial fraction of network") + ylim(c(0,1)) +
+    geom_smooth() + facet_wrap(p) + xlab("Adversarial fraction of network") + ylim(c(0,1)) +
     ylab("Bias in Estimated ATE / Estimated nonadversarial ATE") + geom_abline(slope=0) + 
     theme_bw() + theme(legend.position="bottom") + guides(color=guide_legend(override.aes=list(fill=NA))) + 
     theme(axis.text.x = element_text(angle = 70, hjust = 1))
@@ -95,7 +90,7 @@ plot.increase.ATE.bias <- function(res, g.type) {
   #stats.sw <- df[,c("method", "lambda_1", "lambda_2", "index", "p", "diff.norm")] %>% group_by(method, lambda_1, lambda_2, index, p) %>% summarize_each_(funs(mean, sd, median), vars="diff.norm") 
   #stats.sw <- subset(stats.sw, index < 31)
   plot7 <- ggplot(subset(df, lambda_1 == 0.75 & lambda_2 == 0.5), aes(pt.adversaries, diff.norm, color=method)) + 
-    geom_smooth() + facet_wrap(~mu) + xlab("Adversarial fraction of network") + ylim(c(0,1)) +
+    geom_smooth() + facet_wrap(mu ~ n) + xlab("Adversarial fraction of network") + ylim(c(0,1)) +
     ylab("Bias in Estimated ATE / Estimated nonadversarial ATE") + geom_abline(slope=0) + 
     theme_bw() + theme(legend.position="bottom") + guides(color=guide_legend(override.aes=list(fill=NA))) + 
     theme(axis.text.x = element_text(angle = 70, hjust = 1))
