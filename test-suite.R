@@ -1,5 +1,42 @@
 source("adversary-experiment.R")
 
+test.single.config <- function(idx, configs, trials, all=FALSE) { 
+  cat("Running", idx, "\n")
+  print(configs[idx,])
+  
+  results <- data.frame(index=numeric(), size.of.dom=logical(), method=character(), 
+                        pt.uncovered=numeric(), adversary.influence=numeric(), ATE.true=numeric(), 
+                        variable=numeric(), value=numeric(), pt.covered=numeric(), n=numeric(), 
+                        graph.type=character(), power=numeric(), degree=numeric(), p=numeric(), 
+                        mu=numeric(), ncoms=numeric(), maxc=numeric(), minc=numeric(), 
+                        lambda_0=numeric(), lambda_1=numeric(), lambda_2=numeric(), stringsAsFactors=FALSE)
+  
+  graph.params <- build.graph.params(configs, idx)
+  adversary.params <- list()
+  adversary.params$model <- reduction.adv.model
+  adversary.params$all <- all
+  outcome.params <- build.outcome.params(configs[idx,"lambda_0"], configs[idx,"lambda_1"], configs[idx,"lambda_2"], configs[idx,"sd.noise"])
+  clustering <- "infomap"
+  
+  for(i in 1:trials) {
+    graph.params$ind <- i
+    
+    cat("trial", i, "\n")
+    bias.behavior.ATE <- adversary.experiment(graph.params, clustering, adversary.params, outcome.params)
+    bias.behavior.ATE$adversary.influence <- as.numeric(bias.behavior.ATE$adversary.influence)
+    bias.behavior.ATE$gui.beta <- as.numeric(bias.behavior.ATE$gui.beta)
+    bias.behavior.ATE$gui.gamma <- as.numeric(bias.behavior.ATE$gui.gamma)
+    
+    bias.behavior.ATE <- add.graph.params(bias.behavior.ATE, graph.params)
+    bias.behavior.ATE <- add.outcome.params(bias.behavior.ATE, outcome.params)
+    bias.behavior.ATE$graph.id <- configs[idx,"graph.no"]
+    bias.behavior.ATE$adv.bias <- bias.behavior.ATE$nonadv.ATE - bias.behavior.ATE$ATE.adv.gui
+    
+    results <- rbind(results, bias.behavior.ATE)
+    write.csv(results, paste0("results/adversary-results-", graph.params$graph.type, "-", idx, ".csv"))
+  }
+}
+
 test <- function() { 
   test.all(100)  
 }
@@ -61,43 +98,6 @@ test.inf.distr <- function(trials=500) {
   
   ggplot(subset(all.infs, (graph.type=="barabasi-albert" & power==.3) | (graph.type=="sbm" & mu==.2) | (graph.type == "small-world" & p == 0.05) | (graph.type == "forest-fire")), aes(infs, color=graph.type)) + 
     stat_density(geom="line") + guides(color=guide_legend(title="graph type")) + xlab("Influence") + ylab("Density") + theme_bw()+ theme(text = element_text(size = 15)) + theme(legend.position="bottom") + facet_wrap(~graph.type)
-}
-
-test.single.config <- function(idx, configs, trials, all=FALSE) { 
-  cat("Running", idx, "\n")
-  print(configs[idx,])
-  
-  results <- data.frame(index=numeric(), size.of.dom=logical(), method=character(), 
-                        pt.uncovered=numeric(), adversary.influence=numeric(), ATE.true=numeric(), 
-                        variable=numeric(), value=numeric(), pt.covered=numeric(), n=numeric(), 
-                        graph.type=character(), power=numeric(), degree=numeric(), p=numeric(), 
-                        mu=numeric(), ncoms=numeric(), maxc=numeric(), minc=numeric(), 
-                        lambda_0=numeric(), lambda_1=numeric(), lambda_2=numeric(), stringsAsFactors=FALSE)
-  
-  graph.params <- build.graph.params(configs, idx)
-  adversary.params <- list()
-  adversary.params$model <- reduction.adv.model
-  adversary.params$all <- all
-  outcome.params <- build.outcome.params(configs[idx,"lambda_0"], configs[idx,"lambda_1"], configs[idx,"lambda_2"], configs[idx,"sd.noise"])
-  clustering <- "infomap"
-  
-  for(i in 1:trials) {
-    graph.params$ind <- i
-    
-    cat("trial", i, "\n")
-    bias.behavior.ATE <- adversary.experiment(graph.params, clustering, adversary.params, outcome.params)
-    bias.behavior.ATE$adversary.influence <- as.numeric(bias.behavior.ATE$adversary.influence)
-    bias.behavior.ATE$gui.beta <- as.numeric(bias.behavior.ATE$gui.beta)
-    bias.behavior.ATE$gui.gamma <- as.numeric(bias.behavior.ATE$gui.gamma)
-    
-    bias.behavior.ATE <- add.graph.params(bias.behavior.ATE, graph.params)
-    bias.behavior.ATE <- add.outcome.params(bias.behavior.ATE, outcome.params)
-    bias.behavior.ATE$graph.id <- configs[idx,"graph.no"]
-    bias.behavior.ATE$adv.bias <- bias.behavior.ATE$nonadv.ATE - bias.behavior.ATE$ATE.adv.gui
-    
-    results <- rbind(results, bias.behavior.ATE)
-    write.csv(results, paste0("results/adversary-results-", graph.params$graph.type, "-", idx, ".csv"))
-  }
 }
 
 test.small.world <- function(trials) { 
